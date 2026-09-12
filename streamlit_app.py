@@ -257,6 +257,7 @@ def load_events():
     db = get_db_session()
     try:
         events = db.query(EventModel).order_by(EventModel.created_at.desc()).all()
+        db.expunge_all()
         return events
     finally:
         db.close()
@@ -265,6 +266,7 @@ def load_vehicles():
     db = get_db_session()
     try:
         vehicles = db.query(VehicleModel).all()
+        db.expunge_all()
         return vehicles
     finally:
         db.close()
@@ -273,6 +275,7 @@ def load_letter_drafts():
     db = get_db_session()
     try:
         drafts = db.query(LetterDraftModel).order_by(LetterDraftModel.created_at.desc()).all()
+        db.expunge_all()
         return drafts
     finally:
         db.close()
@@ -969,6 +972,28 @@ with tab_vision:
                 if auth_quick_call:
                     if st.button("📞 CONFIRM & INITIATE EMERGENCY HOSPITAL CALL", type="primary", key="quick_call_btn", use_container_width=True):
                         dr = latest["draft"]
+                        db_log = get_db_session()
+                        try:
+                            call_log = EmergencyLogModel(
+                                id=str(uuid.uuid4()),
+                                event_id=latest["event"].id,
+                                vehicle_id=sc.get("vehicle_id", "BUS-034"),
+                                target_agency=hosp['name'],
+                                contact_number=hosp['phone'],
+                                incident_type="Severe Road Accident / Collision",
+                                location_str=f"{sc['latitude']:.4f}, {sc['longitude']:.4f}",
+                                latitude=sc["latitude"],
+                                longitude=sc["longitude"],
+                                timestamp=datetime.datetime.now().isoformat(),
+                                action_type="AUTOMATED_VOICE_SIP_DISPATCH",
+                                message_content=f"URGENT ACCIDENT ALERT: Collision detected at GPS ({sc['latitude']:.5f}, {sc['longitude']:.5f}). Nearest facility {hosp['name']} contacted with ALS ambulance request.",
+                                status="CONNECTED_DISPATCHED"
+                            )
+                            db_log.add(call_log)
+                            db_log.commit()
+                        finally:
+                            db_log.close()
+
                         approve_letter_draft(dr["id"])
                         st.balloons()
                         st.success(f"Emergency Call Placed to {hosp['name']} ({hosp['phone']})! ALS Ambulance Dispatched to GPS ({sc['latitude']:.4f}, {sc['longitude']:.4f}).")
