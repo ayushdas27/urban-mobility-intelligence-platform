@@ -15,7 +15,7 @@ from app.models import EventModel, VehicleModel, EmergencyLogModel, LetterDraftM
 from app.services.letter_generator import create_letter_draft_for_event
 from app.services.simulator import advance_simulation_step, get_route_delays
 from app.services.deduplication import get_consolidated_issues
-from app.services.ai_vision import PRESET_SCENARIOS
+from app.services.ai_vision import PRESET_SCENARIOS, generate_dashcam_frame, analyze_image_bytes
 from app.config import settings
 
 # Initialize database schema and seeds
@@ -757,71 +757,192 @@ with tab_letters:
             st.info("No dispatched letters in registry yet.")
 
 # ---------------------------------------------------------
-# TAB 3: EDGE AI VISION TESTING LAB
+# TAB 3: EDGE AI VISION TESTING LAB & DASHCAM FEED
 # ---------------------------------------------------------
 with tab_vision:
-    st.subheader("Edge AI Computer Vision & Automated Notice Generator")
-    st.caption("Test onboard bus camera inference. As soon as a scenario or image is analyzed, Edge AI tags GPS/timestamp and automatically creates the official municipal letter draft!")
+    st.subheader("👁️ Edge AI Computer Vision & Onboard Dashcam Viewport")
+    st.caption("Inspect real-time bus camera inference. Edge AI processes 30 FPS video locally on the transit bus, tags GPS/timestamp, and automatically drafts municipal work orders upon incident detection.")
 
-    v_cols = st.columns([4, 6])
-    with v_cols[0]:
-        st.markdown("#### Select Dashcam Scenario Preset")
-        scenario_options = list(PRESET_SCENARIOS.keys())
-        selected_key = st.selectbox(
-            "Curated Camera Scenarios (Chennai Routes):",
-            scenario_options,
-            format_func=lambda k: f"{PRESET_SCENARIOS[k]['title']} ({PRESET_SCENARIOS[k]['issue_type']})"
+    # BANDWIDTH ARCHITECTURE CALLOUT
+    st.markdown("""
+    <div style="background: linear-gradient(135deg, #0f172a, #1e293b); border: 1px solid #38bdf8; border-radius: 10px; padding: 14px 18px; margin-bottom: 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+            <div style="font-weight: 700; font-size: 15px; color: #38bdf8;">
+                📡 Bandwidth Efficiency Telemetry: Edge AI vs 24/7 Cellular Video Streaming
+            </div>
+            <span style="background: #059669; color: #ffffff; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 12px;">
+                99.8% Bandwidth Saved
+            </span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 10px;">
+            <div style="background: rgba(15, 23, 42, 0.6); padding: 10px; border-radius: 6px; border-left: 3px solid #ef4444;">
+                <div style="font-size: 11px; color: #94a3b8;">24/7 Video Streaming (1,000 Buses)</div>
+                <div style="font-size: 14px; font-weight: 700; color: #fca5a5;">2.5 Gbps / ~810 TB/month</div>
+                <div style="font-size: 11px; color: #64748b;">Cost: ~₹45 Lakhs / month (Prohibitive)</div>
+            </div>
+            <div style="background: rgba(15, 23, 42, 0.6); padding: 10px; border-radius: 6px; border-left: 3px solid #10b981;">
+                <div style="font-size: 11px; color: #94a3b8;">Our Edge AI Protocol (Event-Driven)</div>
+                <div style="font-size: 14px; font-weight: 700; color: #6ee7b7;">2.1 KB JSON + 75 KB Snapshot</div>
+                <div style="font-size: 11px; color: #64748b;">Uplink only on confidence &gt; 85%</div>
+            </div>
+            <div style="background: rgba(15, 23, 42, 0.6); padding: 10px; border-radius: 6px; border-left: 3px solid #38bdf8;">
+                <div style="font-size: 11px; color: #94a3b8;">Local Storage Ring Buffer</div>
+                <div style="font-size: 14px; font-weight: 700; color: #7dd3fc;">128 GB Onboard NVMe SSD</div>
+                <div style="font-size: 11px; color: #64748b;">Rolling 7-Day DVR (Depot Wi-Fi Sync)</div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    with st.expander("💡 Why the portal doesn't stream 24/7 video from all 1,000 buses (Judges & Architecture FAQ)", expanded=False):
+        st.markdown("""
+        - **The 1,000-Bus Bandwidth Crisis**: Streaming 1080p video continuous at 2.5 Mbps from 1,000 municipal buses would consume **2.5 Gigabits/sec of continuous cellular uplink**, costing the municipal corporation over **₹45–50 Lakhs per month in 5G/4G data bills**, choking urban mobile cell towers, and causing extreme device thermal throttling.
+        - **The Edge AI Solution**: We install a lightweight Edge AI processor (NVIDIA Jetson / Raspberry Pi 5 with Coral TPU) inside each bus. The AI analyzes **all 30 frames per second directly in the vehicle's onboard memory**.
+        - **Event-Driven Telemetry**: 99% of regular footage has zero road defects and is discarded immediately. When a defect is detected (confidence > 85%), the bus sends a **tiny 2.1 KB JSON telemetry packet** with GPS coordinates, defect classification, and severity, plus an optional 75 KB compressed snapshot.
+        - **On-Demand Remote DVR Pull**: If traffic police or municipal engineers ever require full video footage for legal or forensic verification, they can query the bus's onboard 128 GB NVMe SSD for a specific 30-second time slice over 4G/5G, or sync all 1080p archival video over high-speed depot Wi-Fi during nighttime maintenance.
+        """)
+
+    col_cam, col_ctrl = st.columns([7, 5])
+
+    with col_ctrl:
+        st.markdown("#### ⚙️ Camera Feed & Scenario Controls")
+        feed_mode = st.radio("Select Input Mode:", ["Curated Transit Route Scenarios", "Upload Custom Dashcam Image"], horizontal=True)
+
+        selected_scenario = None
+        custom_bytes = None
+        selected_key = "pothole_annasalai"
+
+        if feed_mode == "Curated Transit Route Scenarios":
+            scenario_options = list(PRESET_SCENARIOS.keys())
+            selected_key = st.selectbox(
+                "Select Bus Dashcam Route:",
+                scenario_options,
+                format_func=lambda k: f"{PRESET_SCENARIOS[k]['title']} ({PRESET_SCENARIOS[k]['issue_type']})"
+            )
+            selected_scenario = PRESET_SCENARIOS[selected_key]
+
+            st.markdown(f"""
+            <div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 12px; margin: 8px 0;">
+                <div style="font-weight: bold; font-size: 13px; color: #38bdf8;">{selected_scenario['title']}</div>
+                <div style="font-size: 12px; color: #94a3b8; margin: 4px 0;">Fleet ID: <strong>{selected_scenario['vehicle_id']}</strong> · Route: <strong>{selected_scenario.get('route', 'MTC')}</strong> · Speed: <strong>{selected_scenario.get('speed', 35)} km/h</strong></div>
+                <div style="font-size: 12px; color: #cbd5e1; margin-top: 4px;">{selected_scenario['details']}</div>
+                <div style="font-size: 11px; font-family: monospace; color: #38bdf8; margin-top: 4px;">GPS: {selected_scenario['latitude']:.4f}°N, {selected_scenario['longitude']:.4f}°E</div>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            uploaded_file = st.file_uploader("Upload Dashcam Photo (JPG/PNG):", type=["jpg", "jpeg", "png"])
+            if uploaded_file:
+                custom_bytes = uploaded_file.read()
+                st.success("Uploaded custom dashcam frame.")
+
+        st.markdown("##### 👁️ Viewport Overlay Settings")
+        c_ov1, c_ov2 = st.columns(2)
+        with c_ov1:
+            show_bboxes = st.checkbox("AI Bounding Boxes Overlay", value=True)
+        with c_ov2:
+            playback_state = st.selectbox("Feed Buffer State:", ["● LIVE (30 FPS Stream)", "⏸️ Frame Frozen", "⏪ 5s Incident DVR"])
+
+        if st.button("🚀 Run AI Analysis & Draft Official Notice", type="primary", use_container_width=True):
+            if selected_scenario:
+                new_event, new_draft = create_manual_event_and_draft(
+                    issue_type=selected_scenario["issue_type"],
+                    vehicle_id=selected_scenario["vehicle_id"],
+                    severity=selected_scenario["severity"],
+                    lat=selected_scenario["latitude"],
+                    lng=selected_scenario["longitude"],
+                    details=selected_scenario["details"],
+                    confidence=selected_scenario["confidence"]
+                )
+                st.session_state["latest_ai_result"] = {
+                    "scenario": selected_scenario,
+                    "event": new_event,
+                    "draft": new_draft,
+                    "scenario_key": selected_key
+                }
+                st.toast("Inference complete! Incident logged to portal and official letter drafted.", icon="✅")
+            elif custom_bytes:
+                analysis = analyze_image_bytes(custom_bytes)
+                new_event, new_draft = create_manual_event_and_draft(
+                    issue_type=analysis["issue_type"],
+                    vehicle_id=analysis["vehicle_id"],
+                    severity=analysis["severity"],
+                    lat=analysis["latitude"],
+                    lng=analysis["longitude"],
+                    details=analysis["details"],
+                    confidence=analysis["confidence"]
+                )
+                st.session_state["latest_ai_result"] = {
+                    "scenario": {
+                        "title": f"Custom Dashcam: {analysis['issue_type']}",
+                        "vehicle_id": analysis["vehicle_id"],
+                        "route": "Custom Upload",
+                        "latitude": analysis["latitude"],
+                        "longitude": analysis["longitude"],
+                        "speed": 32.0,
+                        "issue_type": analysis["issue_type"],
+                        "confidence": analysis["confidence"],
+                        "severity": analysis["severity"],
+                        "details": analysis["details"],
+                        "detections": analysis["detections"]
+                    },
+                    "event": new_event,
+                    "draft": new_draft,
+                    "scenario_key": "custom",
+                    "custom_bytes": custom_bytes
+                }
+                st.toast("Custom image analyzed! Official letter drafted.", icon="✅")
+
+    with col_cam:
+        st.markdown("#### 📹 Real-Time Dashcam Visual Feed")
+        
+        frame_bytes = generate_dashcam_frame(
+            scenario_key=selected_key if selected_scenario else "pothole_annasalai",
+            with_bbox=show_bboxes,
+            custom_image_bytes=custom_bytes
         )
-        selected_scenario = PRESET_SCENARIOS[selected_key]
+
+        st.image(
+            frame_bytes,
+            use_container_width=True,
+            caption=f"ONBOARD DASHCAM: {selected_scenario['vehicle_id'] if selected_scenario else 'BUS-021'} · SONY STARVIS IMX415 · {'AI DETECTIONS ACTIVE' if show_bboxes else 'RAW SENSOR FEED'}"
+        )
 
         st.markdown(f"""
-        <div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 14px; margin: 10px 0;">
-            <div style="font-weight: bold; font-size: 14px; color: #38bdf8;">{selected_scenario['title']}</div>
-            <div style="font-size: 12px; color: #94a3b8; margin: 4px 0;">Bus ID: <strong>{selected_scenario['vehicle_id']}</strong> · Severity: <strong>{selected_scenario['severity']}</strong></div>
-            <div style="font-size: 12px; color: #cbd5e1; margin-top: 6px;">{selected_scenario['details']}</div>
-            <div style="font-size: 11px; font-family: monospace; color: #38bdf8; margin-top: 6px;">GPS: {selected_scenario['latitude']:.4f}, {selected_scenario['longitude']:.4f}</div>
+        <div style="background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 8px 14px; display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
+            <div style="color: #22c55e; font-weight: 700;">
+                <span style="display: inline-block; width: 8px; height: 8px; background: #22c55e; border-radius: 50%; margin-right: 6px;"></span>
+                LIVE SENSOR FEED (1080p @ 30 FPS)
+            </div>
+            <div style="color: #94a3b8;">Status: <strong style="color: #f8fafc;">{playback_state}</strong></div>
+            <div style="color: #38bdf8; font-family: monospace;">CAN-BUS: 24.2V | GPS: LOCKED</div>
         </div>
         """, unsafe_allow_html=True)
 
-        if st.button("🚀 Run AI Analysis & Draft Letter", type="primary", use_container_width=True):
-            new_event, new_draft = create_manual_event_and_draft(
-                issue_type=selected_scenario["issue_type"],
-                vehicle_id=selected_scenario["vehicle_id"],
-                severity=selected_scenario["severity"],
-                lat=selected_scenario["latitude"],
-                lng=selected_scenario["longitude"],
-                details=selected_scenario["details"],
-                confidence=selected_scenario["confidence"]
-            )
-            st.session_state["latest_ai_result"] = {
-                "scenario": selected_scenario,
-                "event": new_event,
-                "draft": new_draft
-            }
-            st.toast("Inference complete! Official letter drafted and ready for review.", icon="✅")
+    # LOWER SECTION: INFERENCE RESULTS & LETTER DRAFTS
+    st.markdown("---")
+    latest = st.session_state.get("latest_ai_result")
+    if latest:
+        sc = latest["scenario"]
+        st.markdown("### 📋 AI Inference Diagnostic & Automated Official Work Order")
 
-    with v_cols[1]:
-        st.markdown("#### AI Inference Output & Bounding Box Visualization")
-        
-        latest = st.session_state.get("latest_ai_result")
-        if latest:
-            sc = latest["scenario"]
+        c_diag1, c_diag2 = st.columns([5, 7])
+        with c_diag1:
             st.markdown(f"""
-            <div style="background: #1e293b; border: 2px solid #38bdf8; border-radius: 10px; padding: 18px; box-shadow: 0 4px 16px rgba(0,0,0,0.4);">
+            <div style="background: #1e293b; border: 2px solid #38bdf8; border-radius: 10px; padding: 16px; box-shadow: 0 4px 16px rgba(0,0,0,0.4);">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-size: 16px; font-weight: bold; color: #f8fafc;">Detection: {sc['issue_type']}</span>
+                    <span style="font-size: 16px; font-weight: bold; color: #f8fafc;">Detected: {sc['issue_type']}</span>
                     <span style="background: #0369a1; color: #f0f9ff; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 12px;">Confidence: {sc['confidence']*100:.1f}%</span>
                 </div>
                 <div style="font-size: 13px; color: #cbd5e1; margin-top: 6px;">{sc['details']}</div>
                 <div style="margin-top: 12px; background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 10px; font-size: 12px;">
-                    <div><strong>Detected Classes:</strong> {', '.join(sc.get('detections', ['Obstacle', 'Surface Defect']))}</div>
-                    <div><strong>Traffic Density:</strong> {sc.get('traffic_density', 'NORMAL')}</div>
+                    <div><strong>Severity Level:</strong> <span style="color: #f87171; font-weight: 700;">{sc.get('severity', 'HIGH')}</span></div>
                     <div><strong>Assigned Jurisdiction:</strong> {latest['event'].assigned_department}</div>
+                    <div><strong>Detected Objects:</strong> {', '.join([d['label'] if isinstance(d, dict) else str(d) for d in sc.get('detections', [])])}</div>
+                    <div><strong>Cellular Payload Sent:</strong> 2.1 KB (Alert JSON + GPS)</div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
 
-            # Check if critical accident scenario
             is_critical_accident = (
                 sc.get("severity") == "CRITICAL" or 
                 "accident" in sc.get("issue_type", "").lower() or 
@@ -847,6 +968,7 @@ with tab_vision:
                 )
                 if auth_quick_call:
                     if st.button("📞 CONFIRM & INITIATE EMERGENCY HOSPITAL CALL", type="primary", key="quick_call_btn", use_container_width=True):
+                        dr = latest["draft"]
                         approve_letter_draft(dr["id"])
                         st.balloons()
                         st.success(f"Emergency Call Placed to {hosp['name']} ({hosp['phone']})! ALS Ambulance Dispatched to GPS ({sc['latitude']:.4f}, {sc['longitude']:.4f}).")
@@ -854,10 +976,11 @@ with tab_vision:
                 else:
                     st.caption("🔒 Operator authorization required before placing emergency call.")
 
-            st.markdown("#### 📄 Generated Official Letter Draft:")
+        with c_diag2:
             dr = latest["draft"]
-            st.info(f"**Official Complaint Drafted:** Ref No: `{dr['reference_no']}` to **{dr['recipient_name']}**")
-            st.text_area("Letter Draft Body:", dr["letter_body"], height=160, disabled=True)
+            st.markdown(f"#### 📄 Official Letter Draft (Ref: `{dr['reference_no']}`)")
+            st.caption(f"Addressed to: **{dr['recipient_name']}** ({dr['department']})")
+            st.text_area("Official Notice Body:", dr["letter_body"], height=170, disabled=True)
             
             col_b1, col_b2 = st.columns(2)
             with col_b1:
@@ -868,14 +991,14 @@ with tab_vision:
             with col_b2:
                 if st.button("Review in Letters Tab ➡️"):
                     st.info("Switch to the 'Official Letter Drafts & Dispatch' tab above to review full letterhead.")
-        else:
-            st.markdown("""
-            <div style="border: 2px dashed #334155; border-radius: 10px; padding: 40px 20px; text-align: center; color: #94a3b8;">
-                <div style="font-size: 32px; margin-bottom: 8px;">📷</div>
-                <div style="font-weight: 600;">No active inference session</div>
-                <div style="font-size: 12px; margin-top: 4px;">Select a scenario on the left and click "Run AI Analysis & Draft Letter".</div>
-            </div>
-            """, unsafe_allow_html=True)
+    else:
+        st.markdown("""
+        <div style="border: 2px dashed #334155; border-radius: 10px; padding: 30px 20px; text-align: center; color: #94a3b8;">
+            <div style="font-size: 28px; margin-bottom: 6px;">⚡</div>
+            <div style="font-weight: 600;">Ready to Run Live Edge AI Inference</div>
+            <div style="font-size: 12px; margin-top: 4px;">Click the <strong>'🚀 Run AI Analysis & Draft Official Notice'</strong> button above to process the selected camera feed.</div>
+        </div>
+        """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
 # TAB 4: DEPARTMENT QUEUES & SLAS
