@@ -1,0 +1,26 @@
+﻿# Python
+__pycache__/
+*.py[cod]
+*.class
+*.so
+build/
+dist/
+*.egg-info/
+.venv/
+env/
+venv/
+
+# Node
+node_modules/
+dist/
+.vite/
+npm-debug.log*
+
+# Streamlit & Cache
+.streamlit/secrets.toml
+
+# OS & Editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

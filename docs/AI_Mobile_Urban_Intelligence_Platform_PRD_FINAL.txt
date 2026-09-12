@@ -1,0 +1,760 @@
+PRODUCT REQUIREMENTS DOCUMENT (PRD)
+
+AI-POWERED MOBILE URBAN INTELLIGENCE PLATFORM USING PUBLIC TRANSPORT FLEET
+
+Project: Smart India Hackathon 2026
+Problem Statement: 26124
+Solution Type: AI + Computer Vision + GPS + Cloud + MongoDB + GIS + Emergency Communication
+Prototype: Software-based MVP
+
+
+1. PRODUCT OVERVIEW
+
+The AI-Powered Mobile Urban Intelligence Platform turns public transport vehicles into mobile urban sensing units.
+
+A camera mounted on a bus continuously observes the road. Edge AI detects and analyses important situations such as potholes, damaged roads, traffic congestion, waterlogging, traffic-sign problems, pedestrian situations and serious road incidents.
+
+The system attaches GPS, timestamp, vehicle ID and type of issue to every analysed event. The event is then sent to the cloud, where it is stored, further processed and automatically assigned to the responsible department.
+
+For critical incidents, the platform can send an emergency message and/or initiate a configured call to a hospital or emergency service. Electricity-related hazards can be routed to the configured electricity department emergency contact.
+
+The final platform provides authorities with a GIS dashboard, alerts, heatmaps and analytics.
+
+
+2. PROBLEM STATEMENT
+
+Cities need continuous information about road conditions, traffic congestion, infrastructure deficiencies and road incidents.
+
+Traditional monitoring methods rely on:
+- Manual inspections
+- Fixed CCTV cameras
+- Citizen complaints
+- Dedicated road sensors
+- Periodic surveys
+
+These methods can be expensive, slow, geographically limited or difficult to scale.
+
+Public buses already travel across large portions of a city every day.
+
+CORE IDEA:
+Every bus becomes a moving sensor, and every journey becomes a source of urban intelligence.
+
+
+3. PRODUCT VISION
+
+Vision:
+Create a scalable AI-powered platform where public transport vehicles continuously observe, analyse and report city conditions while following their normal routes.
+
+Mission:
+Give authorities timely, location-aware information that helps them:
+- Detect infrastructure problems faster
+- Understand traffic patterns
+- Identify recurring congestion
+- Respond to emergencies
+- Route issues to the correct department
+- Prioritize road maintenance
+- Improve urban planning
+
+
+4. GOALS
+
+G1 - Automated Road Monitoring
+Detect and analyse road defects and hazards from vehicle camera footage.
+
+G2 - Traffic Intelligence
+Estimate vehicle density and identify congestion and bottlenecks.
+
+G3 - Location-Based Intelligence
+Attach every issue to GPS coordinates, timestamp, vehicle ID, type of issue, AI confidence and severity.
+
+G4 - Centralized Fleet Monitoring
+Collect information from multiple vehicles in one platform.
+
+G5 - GIS Visualization
+Display detected issues on an interactive city map.
+
+G6 - Reduce Bandwidth Usage
+Perform initial AI processing at the edge and send useful event metadata to the cloud instead of continuously sending raw video whenever possible.
+
+G7 - Automated Department Assignment
+Use issue type and configurable rules to route each issue to the responsible department.
+
+G8 - Emergency Communication
+For critical incidents, send an emergency message and/or initiate a configured call to the relevant hospital or emergency service.
+
+G9 - Actionable Insights
+Convert analysed detections into useful information for authorities and response teams.
+
+
+5. NON-GOALS FOR THE INITIAL MVP
+
+The initial prototype will not attempt to provide:
+- Physical installation of cameras on actual public buses
+- Direct integration with government systems
+- Production-grade number-plate recognition
+- Facial recognition
+- Automatic traffic penalties
+- Fully autonomous emergency response
+- City-wide production deployment
+
+These can be future extensions.
+
+
+6. TARGET USERS AND DEPARTMENTS
+
+The platform is designed to detect an issue and automatically route it to the authority that can take action.
+
+- Municipal authorities - General city and infrastructure monitoring
+- Traffic police - Traffic congestion and traffic incidents
+- Transport department - Vehicle/fleet monitoring
+- Urban planners - Traffic and infrastructure trends
+- Emergency response teams - Location-aware incident information
+- Hospitals - Receive emergency messages/calls for serious incidents requiring medical assistance
+- Road maintenance department - Receive pothole and damaged-road alerts
+- Electricity department - Receive emergency alerts for electricity-related hazards
+- System administrators - Manage vehicles, users, departments, emergency contacts and platform settings
+
+Emergency Contacts:
+The system should maintain configurable emergency contact details for hospitals, emergency services and the electricity department. These contacts must be securely managed by authorized administrators.
+
+
+7. USER PERSONAS
+
+Municipal Officer:
+Find roads requiring maintenance by viewing road-defect clusters and high-priority areas.
+
+Traffic Officer:
+Identify congestion hotspots using traffic heatmaps and recent traffic events.
+
+Transport Administrator:
+Monitor active vehicles, GPS locations, event counts and fleet coverage.
+
+Emergency/Department Officer:
+Receive an automatically routed issue with its location, time, vehicle ID, issue type, severity and supporting information.
+
+
+8. PRODUCT ARCHITECTURE
+
+The updated architecture follows:
+
+DETECT -> ANALYSE -> CLOUD -> ASSIGN DEPARTMENT -> ALERT / ACTION
+
+Flowchart:
+
+BUS CAMERA / VIDEO STREAM
+        |
+        v
+EDGE AI
+Computer Vision / Object Detection
+        |
+        v
+DETECTION AND ANALYSE
+Identify the issue + analyse confidence/severity/context
+        |
+        v
+GPS + TIMESTAMP + VEHICLE ID + TYPE OF ISSUE
+        |
+        v
+CLOUD PLATFORM
+Central processing + event storage + correlation
+        |
+        v
+ASSIGN DEPARTMENT
+Route issue using issue type and configured rules
+        |
+        +-----------------------------+-----------------------------+
+        |                             |                             |
+        v                             v                             v
+GIS DASHBOARD                 DEPARTMENT ALERT              EMERGENCY ACTION
+Maps / Analytics /            Responsible authority         Hospital message/call
+Heatmaps / Fleet              receives issue               or Electricity Department
+Monitoring                                                   emergency contact
+
+Simple system flow:
+
+Camera
+  -> Detection and Analyse
+  -> GPS + Timestamp + Vehicle ID + Type of Issue
+  -> Cloud
+  -> Assign Department
+  -> Alert / Dashboard / Emergency Action
+
+
+9. FUNCTIONAL REQUIREMENTS
+
+FR-01 - Vehicle Identification
+Every sensing vehicle must have a unique ID such as BUS-001, BUS-002 or BUS-003. The vehicle ID must be attached to every event.
+
+FR-02 - GPS and Timestamp
+Every analysed issue must contain accurate GPS coordinates and a timestamp.
+
+FR-03 - Vehicle Detection
+The AI system should detect road vehicles from camera footage.
+Possible classes:
+- Car
+- Bus
+- Truck
+- Motorcycle
+- Bicycle
+
+FR-04 - Pedestrian Detection
+The system should detect pedestrians for:
+- Pedestrian density estimation
+- Road-crossing analysis
+- Vulnerable pedestrian alerts
+- School-zone monitoring
+
+FR-05 - Traffic Density Estimation
+Estimate traffic density using detected vehicles and classify it as LOW, MEDIUM or HIGH.
+
+FR-06 - Pothole Detection
+Detect potholes and attach issue type, confidence, GPS, timestamp and vehicle ID.
+
+FR-07 - Damaged Road Detection
+Identify visible road damage such as cracks, broken pavement and other supported road defects.
+
+FR-08 - Waterlogging Detection
+Identify significant water accumulation on roads where supported by the AI model.
+
+FR-09 - Traffic Sign Detection
+Identify relevant traffic signs such as STOP, SPEED LIMIT, NO ENTRY, WARNING and SCHOOL ZONE.
+
+FR-10 - Damaged/Missing Infrastructure
+Future versions may detect:
+- Damaged traffic signs
+- Missing road dividers
+- Missing zebra crossings
+- Damaged road markings
+
+FR-11 - Detection and Analyse
+The system should not stop at object detection. It should analyse the detected situation and determine:
+- Type of issue
+- Confidence
+- Severity
+- Relevant context
+- Likely responsible department
+
+FR-12 - Issue Metadata
+Every analysed issue must contain:
+- GPS
+- Timestamp
+- Vehicle ID
+- Type of issue
+- AI confidence
+- Severity
+- Optional image/frame evidence
+
+FR-13 - Cloud Processing
+The analysed event should be securely sent to the cloud for centralized processing, storage, correlation and validation.
+
+FR-14 - Automated Department Assignment
+The cloud platform should automatically route each issue to the appropriate department.
+
+Example routing:
+- Pothole / damaged road -> Municipal / Road Maintenance Department
+- Traffic congestion -> Traffic Police / Traffic Management
+- Waterlogging -> Municipal / Emergency Response
+- Electricity-related hazard -> Electricity Department
+- Serious road incident -> Emergency Services / Hospital
+
+FR-15 - Automated Emergency Communication
+When the AI detects and the cloud platform analyses a serious incident, the system should trigger a configured emergency workflow.
+
+Depending on the incident and configured rules, the system can:
+- Send an emergency message to a hospital or emergency service
+- Initiate a configured call
+- Send the incident location
+- Send timestamp and vehicle ID
+- Send issue type and severity
+- Send AI confidence and available supporting evidence
+
+FR-16 - Vehicle Tracking
+For supported incident scenarios, the system should track the relevant vehicle across consecutive frames.
+
+FR-17 - Number Plate Recognition
+A future controlled module may extract vehicle registration numbers when technically feasible. Production deployment requires appropriate privacy, security and legal controls.
+
+FR-18 - Event API
+The backend must provide APIs for receiving analysed events.
+Example:
+POST /events
+
+Example event:
+{
+  "vehicle_id": "BUS-001",
+  "issue_type": "Pothole",
+  "confidence": 0.91,
+  "latitude": 13.0827,
+  "longitude": 80.2707,
+  "timestamp": "2026-09-11T14:32:10",
+  "severity": "HIGH",
+  "details": "Large pothole detected"
+}
+
+FR-19 - Event Retrieval
+Dashboard users should be able to retrieve recent events.
+Example:
+GET /events
+
+FR-20 - Event Management
+Authorized administrators should be able to:
+- View events
+- Filter events
+- Manage vehicles
+- Manage departments
+- Configure emergency contacts
+- Remove test events
+
+
+10. GIS DASHBOARD
+
+FR-21 - Live Event Map
+Display analysed events geographically on an interactive map.
+
+FR-22 - Event Filtering
+Filter by:
+- Type of issue
+- Vehicle
+- Department
+- Date/time
+- Severity
+- Confidence
+- Geographic area
+- Status
+
+FR-23 - Heatmaps
+Generate:
+- Traffic heatmaps
+- Road-defect heatmaps
+- Waterlogging hotspots
+- Incident hotspots
+
+Areas with repeated or severe detections should become priority zones.
+
+
+11. ANALYTICS
+
+FR-24 - Event Analytics
+Display:
+- Total events
+- Potholes
+- Traffic events
+- Waterlogging
+- Road issues
+- Critical incidents
+- Department-wise issue counts
+
+FR-25 - Fleet Analytics
+Display:
+- Total vehicles
+- Active vehicles
+- Events per vehicle
+- Coverage area
+- Fleet activity
+
+FR-26 - Traffic Analytics
+Provide:
+- Traffic density
+- Congestion locations
+- Frequently congested routes
+- Time-based traffic patterns
+
+FR-27 - Route Delay Estimation
+Compare expected route travel time with observed travel time.
+
+Example:
+Route 21
+Expected: 42 min
+Observed: 61 min
+Delay: +19 min
+
+
+12. AI PROCESSING STRATEGY
+
+The updated architecture separates fast onboard detection/analysis from centralized cloud processing and response.
+
+STEP 1 - DETECT
+The camera provides road video to Edge AI.
+
+STEP 2 - ANALYSE
+AI analyses the detected situation and determines the issue type, confidence, severity and relevant context.
+
+STEP 3 - ADD LOCATION AND VEHICLE INFORMATION
+The system attaches:
+- GPS
+- Timestamp
+- Vehicle ID
+- Type of issue
+
+STEP 4 - SEND TO CLOUD
+The analysed event is securely sent to the cloud.
+
+STEP 5 - CLOUD PROCESSING
+The cloud platform stores, correlates, validates and further analyses events.
+
+STEP 6 - ASSIGN DEPARTMENT
+The cloud platform determines the responsible department using configurable rules.
+
+STEP 7 - NOTIFY AND TAKE ACTION
+The responsible department receives the issue.
+
+For critical medical incidents:
+- Send a message to the configured hospital/emergency service
+- Initiate a configured emergency call when appropriate
+
+For electricity-related hazards:
+- Send an alert to the configured electricity department emergency contact
+
+UPDATED FLOW:
+
+Camera
+ -> Detection and Analyse
+ -> GPS + Timestamp + Vehicle ID + Type of Issue
+ -> Cloud
+ -> Assign Department
+ -> Department Alert / GIS Dashboard
+ -> Emergency Message or Call when required
+
+This approach reduces unnecessary raw-video transmission while enabling centralized urban intelligence and coordinated response.
+
+
+13. MVP TECHNOLOGY STACK
+
+- Programming Language: Python
+- AI: YOLO / Computer Vision
+- Backend: FastAPI
+- Database: MongoDB
+- Local demo fallback: SQLite may be retained during early development if needed
+- Dashboard: Streamlit
+- Maps: Interactive GIS/map component
+- API Communication: REST
+- Data Processing: Pandas
+- Computer Vision: OpenCV
+- AI Framework: PyTorch / Ultralytics
+- Cloud Layer: Cloud-hosted backend and MongoDB deployment
+
+Future production stack:
+Edge Device
+  -> Optimized AI Model
+  -> MQTT/HTTPS
+  -> FastAPI
+  -> MongoDB
+  -> WebSocket/REST
+  -> GIS Dashboard
+  -> Department and Emergency Communication Services
+
+
+14. CURRENT MVP FEATURES
+
+The prototype demonstrates the basic architecture:
+- FastAPI backend
+- Event database
+- Vehicle/event simulation
+- GPS-tagged events
+- Interactive dashboard
+- Event map
+- Event table
+- Basic analytics
+- YOLO-based image inference
+- Vehicle/pedestrian detection
+- AI result submission to backend
+
+Updated target pipeline:
+
+Image/Video
+ -> YOLO / Edge AI
+ -> Detection and Analyse
+ -> GPS + Timestamp + Vehicle ID + Type of Issue
+ -> Cloud API
+ -> MongoDB
+ -> Department Assignment
+ -> Dashboard / Department Alert / Emergency Workflow
+
+The emergency message/call and department-routing components are planned modules for the next implementation stage unless already connected to real communication services.
+
+
+15. FUTURE DEVELOPMENT ROADMAP
+
+PHASE 1 - MVP
+- Backend
+- MongoDB integration
+- Dashboard
+- GPS events
+- Basic AI inference
+- Vehicle/fleet simulation
+
+PHASE 2 - REAL VIDEO AI
+- Video upload
+- Frame extraction
+- Real-time inference
+- Vehicle counting
+- Pedestrian counting
+- Traffic density estimation
+
+PHASE 3 - ROAD INTELLIGENCE
+- Potholes
+- Road damage
+- Waterlogging
+- Traffic signs
+- Road markings
+
+PHASE 4 - FLEET SIMULATION
+Simulate multiple vehicles moving through a city and generate realistic GPS streams.
+
+PHASE 5 - CLOUD INTELLIGENCE
+- Central cloud processing
+- Event correlation
+- Smart deduplication
+- Severity scoring
+- Department assignment
+- Traffic and road-defect heatmaps
+- Route delay
+- Bottleneck detection
+
+PHASE 6 - EMERGENCY RESPONSE
+- Hospital emergency contacts
+- Electricity department emergency contacts
+- Automated emergency messages
+- Configured emergency calls
+- Incident escalation rules
+- Delivery/status tracking
+
+PHASE 7 - PRODUCTION ARCHITECTURE
+- Laptop AI -> Edge AI hardware
+- Secure cloud deployment
+- MongoDB production setup
+- REST + WebSocket/MQTT
+- Authentication and role-based access
+- Monitoring and logging
+
+
+16. EVENT DATA MODEL
+
+Each event should contain:
+- Event ID
+- Vehicle ID
+- Type of Issue
+- Confidence
+- Latitude
+- Longitude
+- Timestamp
+- Severity
+- Assigned Department
+- Emergency Contact / Escalation Target when applicable
+- Notification Status
+- Image/Frame (optional)
+- Status
+- Created/Updated time
+
+
+17. EVENT SEVERITY
+
+LOW:
+Minor issue that can be reviewed during normal operations.
+
+MEDIUM:
+Issue requiring inspection or maintenance.
+
+HIGH:
+Potentially dangerous road or traffic condition.
+
+CRITICAL:
+Potential immediate safety or emergency concern.
+
+Future priority scoring can combine:
+- AI confidence
+- Severity
+- Road importance
+- Number of repeated detections
+- Number of vehicles reporting the issue
+- Emergency impact
+
+
+18. SMART DEDUPLICATION
+
+The same physical pothole or road problem may be detected by multiple vehicles.
+
+Example:
+BUS-001 -> Detection
+BUS-008 -> Detection
+BUS-015 -> Detection
+
+The platform should recognize that nearby detections may represent one physical issue.
+
+Instead of showing three unrelated potholes, the cloud platform can create one consolidated issue:
+- Reports: 3
+- Vehicles: 3
+- Confidence: High
+- Priority: High
+
+This turns individual detections into meaningful urban intelligence.
+
+
+19. KEY PERFORMANCE INDICATORS
+
+Prototype targets:
+- AI detection precision: >= 85% target
+- Event GPS availability: >= 95%
+- Dashboard response: < 2 seconds for normal queries
+- Event ingestion: Near real-time
+- Duplicate-event reduction: >= 70% target
+- Fleet scalability: 100+ simulated vehicles
+- Metadata transmission: Significantly lower than raw video
+- Department assignment accuracy: >= 90% target
+- Emergency alert delivery: Trackable and near real-time
+
+These are prototype targets, not claims of achieved performance.
+
+
+20. SECURITY AND PRIVACY
+
+The production system should implement:
+- User authentication
+- Role-based access control
+- HTTPS
+- API authentication
+- Encrypted data transmission
+- Secure MongoDB access
+- Audit logs
+- Controlled access to incident media
+- Appropriate data-retention policies
+- Secure storage of hospital and electricity department contacts
+- Authentication for emergency communication services
+
+Sensitive incident information and emergency contacts should be accessible only to authorized users and services.
+
+
+21. RELIABILITY REQUIREMENTS
+
+NETWORK FAILURE:
+Vehicle
+ -> No network
+ -> Store event metadata locally
+ -> Network restored
+ -> Synchronize with cloud
+
+AI FAILURE:
+If AI inference fails, the system should log the error and recover/restart the inference service where possible.
+
+GPS FAILURE:
+The system should mark the location as unavailable rather than generating a false location.
+
+CLOUD FAILURE:
+The vehicle/edge system should temporarily queue important event metadata and synchronize it when the cloud connection is restored.
+
+EMERGENCY COMMUNICATION FAILURE:
+If the primary communication method fails, the system should record the failure and use a configured secondary notification method where available.
+
+
+22. SUCCESS CRITERIA FOR SIH DEMO
+
+A successful demonstration should show the complete flow:
+
+1. A vehicle camera/video provides visual input.
+2. Edge AI detects an issue.
+3. AI analyses the detected situation.
+4. The system generates GPS, timestamp, vehicle ID and type of issue.
+5. The analysed event is sent to the cloud.
+6. MongoDB stores the event.
+7. The cloud platform assigns the issue to the correct department.
+8. The issue appears on the GIS dashboard.
+9. The responsible department receives an alert.
+10. If a critical incident is detected, the emergency workflow sends an appropriate hospital/emergency message and/or initiates a configured call.
+11. Electricity-related hazards are routed to the configured electricity department emergency contact.
+12. Multiple vehicles collectively create a city-level intelligence picture.
+
+
+23. EXAMPLE END-TO-END SCENARIO
+
+BUS-021 is travelling through Chennai.
+
+The camera observes a road section.
+
+AI detects:
+Pothole
+Confidence: 93%
+
+The system analyses the issue and adds:
+- Vehicle ID: BUS-021
+- GPS: 13.0478, 80.2090
+- Timestamp: 14:35:22
+- Type of Issue: Pothole
+- Severity: HIGH
+
+The event is sent to the cloud.
+
+The cloud platform stores the event in MongoDB and assigns it to:
+Road Maintenance Department
+
+The department receives the alert and the issue appears on the GIS dashboard.
+
+If another vehicle detects the same location, the platform can correlate the events and increase the priority.
+
+For a serious accident or medical emergency, the same architecture can route the incident to the configured hospital and trigger an emergency message and/or call containing the location, time, vehicle ID and incident details.
+
+For an electricity-related hazard, the platform can route the event to the configured electricity department emergency contact.
+
+
+24. UNIQUE SELLING PROPOSITION
+
+The key differentiator is:
+
+Using existing public transport vehicles as a distributed, mobile urban sensing network.
+
+Traditional approach:
+Fixed sensors -> Fixed coverage -> Limited expansion
+
+Proposed approach:
+BUS 01 -> BUS 02 -> BUS 03 -> BUS 04
+        |
+        v
+Mobile sensing network
+        |
+        v
+Detection and Analyse
+        |
+        v
+Cloud Urban Intelligence
+        |
+        v
+Automatic Department Assignment
+        |
+        v
+Action / Emergency Response
+
+
+25. HOW THE SYSTEM WORKS - SIMPLE VIEW
+
+1. A bus camera observes the road.
+2. Edge AI detects a possible issue.
+3. AI analyses what happened.
+4. The system adds GPS, timestamp, vehicle ID and type of issue.
+5. The event is sent to the cloud.
+6. MongoDB stores the event and supports centralized processing.
+7. The system automatically assigns the issue to the correct department.
+8. The responsible department receives an alert.
+9. For critical incidents, the system can send a message and/or initiate a configured call to a hospital or emergency service.
+10. Electricity-related hazards can be sent to the electricity department emergency contact.
+11. Authorities can view all issues on the GIS dashboard and use analytics for decision-making.
+
+
+26. FINAL PRODUCT STATEMENT
+
+AI-POWERED MOBILE URBAN INTELLIGENCE PLATFORM
+
+"Every bus becomes a moving sensor. Every journey becomes a source of urban intelligence."
+
+The platform combines Edge AI, computer vision, GPS, vehicle identification, cloud processing, MongoDB, APIs, GIS analytics, automated department assignment and emergency communication.
+
+The result is a scalable system that can:
+- Detect problems
+- Analyse problems
+- Locate problems
+- Store and correlate problems
+- Assign problems to the correct department
+- Alert authorities
+- Contact hospitals/emergency services for critical incidents
+- Notify the electricity department about electricity-related hazards
+- Help authorities understand the city through maps, heatmaps and analytics
+
+The MVP provides the foundation for an SIH demonstration, while future phases can transform it into a production-ready smart-city platform.
