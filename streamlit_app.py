@@ -324,8 +324,6 @@ def create_manual_event_and_draft(issue_type, vehicle_id, severity, lat, lng, de
         )
         db.add(event)
         db.commit()
-        db.refresh(event)
-
         # Create official letter draft
         draft_dict = create_letter_draft_for_event({
             "id": event_id,
@@ -338,7 +336,31 @@ def create_manual_event_and_draft(issue_type, vehicle_id, severity, lat, lng, de
             "details": details
         }, db=db)
         
-        return event, draft_dict
+        class SafeEvent:
+            def __init__(self, **kwargs):
+                self.__dict__.update(kwargs)
+            def __getitem__(self, key):
+                return self.__dict__[key]
+            def get(self, key, default=None):
+                return self.__dict__.get(key, default)
+
+        safe_event = SafeEvent(
+            id=event_id,
+            vehicle_id=vehicle_id,
+            issue_type=issue_type,
+            confidence=confidence,
+            latitude=lat,
+            longitude=lng,
+            timestamp=now_iso,
+            severity=severity,
+            assigned_department=routing["department"],
+            emergency_contact=routing["emergency_contact"],
+            emergency_dispatched=severity == "CRITICAL",
+            status="PENDING_APPROVAL",
+            details=details,
+            created_at=now_iso
+        )
+        return safe_event, draft_dict
     finally:
         db.close()
 
@@ -621,15 +643,19 @@ with tab_letters:
                         st.markdown(f"**Priority:** `{d.priority}`")
                         
                         # Resolve event coordinates for hospital routing
+                        ev_lat = 13.0827
+                        ev_lng = 80.2785
+                        ev_veh = "FLEET-AI"
                         db_ev = get_db_session()
-                        ev_target = None
                         try:
                             ev_target = db_ev.query(EventModel).filter(EventModel.id == d.event_id).first()
+                            if ev_target:
+                                ev_lat = float(ev_target.latitude)
+                                ev_lng = float(ev_target.longitude)
+                                ev_veh = str(ev_target.vehicle_id)
                         finally:
                             db_ev.close()
 
-                        ev_lat = ev_target.latitude if ev_target else 13.0827
-                        ev_lng = ev_target.longitude if ev_target else 80.2785
                         nearest_hosp = get_nearest_hospital(ev_lat, ev_lng)
 
                         st.markdown("---")
@@ -666,7 +692,7 @@ with tab_letters:
                                         call_log = EmergencyLogModel(
                                             id=str(uuid.uuid4()),
                                             event_id=d.event_id,
-                                            vehicle_id=ev_target.vehicle_id if ev_target else "FLEET-AI",
+                                            vehicle_id=ev_veh,
                                             target_agency=nearest_hosp['name'],
                                             contact_number=nearest_hosp['phone'],
                                             incident_type="Severe Road Accident / Collision",
