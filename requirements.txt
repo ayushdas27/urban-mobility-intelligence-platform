@@ -10,3 +10,4 @@ uvicorn>=0.28.0
 requests>=2.31.0
 pillow>=10.2.0
 numpy>=1.26.0
+opencv-python-headless>=4.8.0

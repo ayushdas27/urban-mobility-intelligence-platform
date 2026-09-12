@@ -1,8 +1,14 @@
 import os
-import cv2
-import numpy as np
 import base64
+import io
+import numpy as np
 from typing import List, Dict, Any, Optional
+from PIL import Image, ImageDraw
+
+try:
+    import cv2
+except ImportError:
+    cv2 = None
 
 _yolo_model = None
 _yolo_initialized = False
@@ -34,70 +40,69 @@ PRESET_SCENARIOS = {
         "traffic_density": "MEDIUM",
         "details": "Deep asphalt cavity (38cm dia) detected on transit corridor near flyover.",
         "detections": [
-            {"label": "Pothole", "confidence": 0.94, "bbox": [180, 240, 290, 310], "category": "road_defect"},
-            {"label": "Car", "confidence": 0.91, "bbox": [320, 140, 480, 260], "category": "vehicle"},
-            {"label": "Motorcycle", "confidence": 0.88, "bbox": [90, 160, 160, 240], "category": "vehicle"}
+            {"label": "Pothole", "confidence": 0.94, "bbox": [120, 240, 220, 310], "category": "road_defect"},
+            {"label": "Car", "confidence": 0.91, "bbox": [280, 180, 390, 280], "category": "vehicle"},
+            {"label": "Motorcycle", "confidence": 0.88, "bbox": [410, 200, 470, 290], "category": "vehicle"}
         ]
     },
-    "traffic_congestion_tnagar": {
-        "title": "Bus Dashcam: Heavy Junction Gridlock (T. Nagar)",
-        "vehicle_id": "BUS-001",
-        "latitude": 13.0418,
-        "longitude": 80.2341,
-        "issue_type": "Traffic Congestion",
-        "confidence": 0.92,
-        "severity": "HIGH",
-        "traffic_density": "HIGH",
-        "details": "Severe bottleneck. 14 vehicles detected within 40m radius, average flow speed < 6 km/h.",
-        "detections": [
-            {"label": "Bus", "confidence": 0.95, "bbox": [120, 110, 280, 290], "category": "vehicle"},
-            {"label": "Car", "confidence": 0.93, "bbox": [290, 150, 410, 250], "category": "vehicle"},
-            {"label": "Car", "confidence": 0.89, "bbox": [420, 160, 520, 240], "category": "vehicle"},
-            {"label": "Motorcycle", "confidence": 0.92, "bbox": [60, 170, 115, 235], "category": "vehicle"},
-            {"label": "Person", "confidence": 0.85, "bbox": [40, 160, 75, 220], "category": "pedestrian"}
-        ]
-    },
-    "waterlogging_omr": {
-        "title": "Bus Dashcam: Submerged Road Segment (OMR IT Corridor)",
-        "vehicle_id": "BUS-015",
-        "latitude": 12.9719,
-        "longitude": 80.2464,
+    "waterlogging_velachery": {
+        "title": "Bus Dashcam: Road Inundation & Waterlogging (Velachery Main Rd)",
+        "vehicle_id": "BUS-008",
+        "latitude": 12.9815,
+        "longitude": 80.2180,
         "issue_type": "Waterlogging",
         "confidence": 0.91,
         "severity": "HIGH",
-        "traffic_density": "LOW",
-        "details": "Stormwater overflow covering 2 lanes (approx 22cm depth) causing lane diversion.",
+        "traffic_density": "HIGH",
+        "details": "Standing water depth ~15cm covering both lanes near MRTS station.",
         "detections": [
-            {"label": "Waterlogged Area", "confidence": 0.91, "bbox": [100, 210, 540, 340], "category": "road_defect"},
-            {"label": "Bus", "confidence": 0.94, "bbox": [220, 120, 360, 230], "category": "vehicle"},
-            {"label": "Pedestrian", "confidence": 0.87, "bbox": [550, 170, 590, 250], "category": "pedestrian"}
+            {"label": "Waterlogging Hazard", "confidence": 0.91, "bbox": [80, 260, 520, 380], "category": "road_defect"},
+            {"label": "Bus", "confidence": 0.96, "bbox": [20, 140, 210, 320], "category": "vehicle"},
+            {"label": "Car", "confidence": 0.89, "bbox": [260, 190, 360, 270], "category": "vehicle"}
         ]
     },
-    "electrical_hazard_marina": {
-        "title": "Bus Dashcam: Snapped Overhead Cable (Marina Beach)",
-        "vehicle_id": "BUS-008",
-        "latitude": 13.0550,
-        "longitude": 80.2780,
-        "issue_type": "Electricity Hazard",
+    "traffic_bottleneck_guindy": {
+        "title": "Bus Dashcam: Severe Gridlock at Kathipara Junction (Guindy)",
+        "vehicle_id": "BUS-015",
+        "latitude": 13.0067,
+        "longitude": 80.2025,
+        "issue_type": "Traffic Congestion",
         "confidence": 0.96,
-        "severity": "CRITICAL",
-        "traffic_density": "LOW",
-        "details": "Overhead high-voltage wire hanging dangerously low across carriage lane.",
+        "severity": "MEDIUM",
+        "traffic_density": "HIGH",
+        "details": "Heavy multi-lane vehicle queue, average corridor speed dropped below 8 km/h.",
         "detections": [
-            {"label": "Exposed Cable", "confidence": 0.96, "bbox": [150, 40, 420, 180], "category": "infrastructure"},
-            {"label": "Car", "confidence": 0.90, "bbox": [430, 160, 560, 250], "category": "vehicle"}
+            {"label": "Car", "confidence": 0.94, "bbox": [100, 190, 190, 270], "category": "vehicle"},
+            {"label": "Car", "confidence": 0.92, "bbox": [200, 185, 290, 265], "category": "vehicle"},
+            {"label": "Bus", "confidence": 0.97, "bbox": [310, 140, 480, 310], "category": "vehicle"},
+            {"label": "Motorcycle", "confidence": 0.87, "bbox": [60, 210, 110, 280], "category": "vehicle"}
         ]
     },
-    "critical_accident_poonamallee": {
-        "title": "Bus Dashcam: Multi-vehicle Collision (Poonamallee High Rd)",
+    "electricity_hazard_tbm": {
+        "title": "Bus Dashcam: Overhead Electric Cable Sagging / Sparking (Tambaram)",
+        "vehicle_id": "BUS-003",
+        "latitude": 12.9249,
+        "longitude": 80.1000,
+        "issue_type": "Electricity Hazard",
+        "confidence": 0.89,
+        "severity": "HIGH",
+        "traffic_density": "LOW",
+        "details": "Overhead 415V distribution line unhooked and suspended at bus clearance height.",
+        "detections": [
+            {"label": "Electrical Hazard", "confidence": 0.89, "bbox": [140, 40, 390, 160], "category": "infrastructure"},
+            {"label": "Pedestrian", "confidence": 0.85, "bbox": [420, 220, 460, 310], "category": "pedestrian"}
+        ]
+    },
+    "accident_critical_omr": {
+        "title": "Bus Dashcam: Multi-Vehicle Collision Incident (OMR Tech Corridor)",
         "vehicle_id": "BUS-034",
-        "latitude": 13.0784,
-        "longitude": 80.2056,
+        "latitude": 12.9716,
+        "longitude": 80.2437,
         "issue_type": "Critical Incident",
         "confidence": 0.95,
         "severity": "CRITICAL",
         "traffic_density": "HIGH",
-        "details": "Overturned motorcycle and stopped car with crowd gathering. Immediate medical response dispatched.",
+        "details": "Two cars collided with rollover; immediate emergency casualty care required.",
         "detections": [
             {"label": "Vehicle Collision", "confidence": 0.95, "bbox": [180, 140, 380, 270], "category": "emergency"},
             {"label": "Person", "confidence": 0.92, "bbox": [390, 150, 430, 230], "category": "pedestrian"},
@@ -109,23 +114,36 @@ PRESET_SCENARIOS = {
 
 def analyze_image_bytes(image_bytes: bytes, vehicle_id: str = "BUS-021", lat: float = 13.0827, lon: float = 80.2707) -> Dict[str, Any]:
     """
-    Runs Edge AI inference on uploaded image bytes using YOLOv8 or OpenCV.
+    Runs Edge AI inference on uploaded image bytes using YOLOv8, OpenCV, or Pillow.
     Identifies vehicles, pedestrians, traffic density, and classifies the event.
     """
-    nparr = np.frombuffer(image_bytes, np.uint8)
-    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-    if img is None:
-        raise ValueError("Invalid image file or encoding.")
-
-    height, width = img.shape[:2]
     detections = []
     vehicle_count = 0
     pedestrian_count = 0
+    pil_img = None
+    img = None
+
+    if cv2 is not None:
+        try:
+            nparr = np.frombuffer(image_bytes, np.uint8)
+            img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            if img is not None:
+                height, width = img.shape[:2]
+        except Exception:
+            img = None
+
+    if img is None:
+        try:
+            pil_img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+            width, height = pil_img.size
+        except Exception:
+            raise ValueError("Invalid image file or encoding.")
 
     yolo = get_yolo_model()
     if yolo is not None:
         try:
-            results = yolo(img, conf=0.3)
+            input_feed = img if img is not None else pil_img
+            results = yolo(input_feed, conf=0.3)
             for r in results:
                 boxes = r.boxes
                 for box in boxes:
@@ -182,16 +200,29 @@ def analyze_image_bytes(image_bytes: bytes, vehicle_id: str = "BUS-021", lat: fl
         issue_type = "Pothole"
         severity = "HIGH"
 
-    # Encode analyzed frame with drawn bounding boxes for front-end preview
-    annotated_img = img.copy()
-    for d in detections:
-        x1, y1, x2, y2 = d["bbox"]
-        color = (0, 255, 0) if d["category"] == "vehicle" else (255, 165, 0) if d["category"] == "pedestrian" else (0, 0, 255)
-        cv2.rectangle(annotated_img, (x1, y1), (x2, y2), color, 2)
-        cv2.putText(annotated_img, f"{d['label']} {int(d['confidence']*100)}%", (x1, max(y1-6, 15)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-
-    _, buffer = cv2.imencode(".jpg", annotated_img)
-    base64_preview = base64.b64encode(buffer).decode("utf-8")
+    # Encode analyzed frame with drawn bounding boxes
+    if cv2 is not None and img is not None:
+        annotated_img = img.copy()
+        for d in detections:
+            x1, y1, x2, y2 = d["bbox"]
+            color = (0, 255, 0) if d["category"] == "vehicle" else (255, 165, 0) if d["category"] == "pedestrian" else (0, 0, 255)
+            cv2.rectangle(annotated_img, (x1, y1), (x2, y2), color, 2)
+            cv2.putText(annotated_img, f"{d['label']} {int(d['confidence']*100)}%", (x1, max(y1-6, 15)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+        _, buffer = cv2.imencode(".jpg", annotated_img)
+        base64_preview = base64.b64encode(buffer).decode("utf-8")
+    else:
+        if pil_img is None:
+            pil_img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+        annotated_pil = pil_img.copy()
+        draw = ImageDraw.Draw(annotated_pil)
+        for d in detections:
+            x1, y1, x2, y2 = d["bbox"]
+            outline = (0, 255, 0) if d["category"] == "vehicle" else (255, 165, 0) if d["category"] == "pedestrian" else (255, 0, 0)
+            draw.rectangle([x1, y1, x2, y2], outline=outline, width=2)
+            draw.text((x1, max(y1-12, 2)), f"{d['label']} {int(d['confidence']*100)}%", fill=outline)
+        buf = io.BytesIO()
+        annotated_pil.save(buf, format="JPEG")
+        base64_preview = base64.b64encode(buf.getvalue()).decode("utf-8")
 
     return {
         "vehicle_id": vehicle_id,
