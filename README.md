@@ -1,6 +1,11 @@
-﻿# 🏛️ Urban Mobility & Civic Monitoring Platform
+# 🏛️ Urban Mobility & Civic Monitoring Platform
 **Smart India Hackathon 2026 · Problem Statement #26124**  
 *AI-Powered Fleet Sensing & Automated Municipal Directive Engine*
+
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io/deploy?repository=ayushdas27/urban-mobility-intelligence-platform&branch=main&mainModule=streamlit_app.py)
+[![GitHub Repository](https://img.shields.io/badge/GitHub-Repository-181717?logo=github)](https://github.com/ayushdas27/urban-mobility-intelligence-platform)
+[![SIH 2026](https://img.shields.io/badge/SIH-2026_PS_%2326124-blue)](https://sih.gov.in)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 ---
 
@@ -29,13 +34,25 @@ Transforming ordinary public transit buses into intelligent, mobile environmenta
 
 ---
 
-## ⚡ Quick Start
+## ☁️ 1-Click Cloud Deployment
+
+You can deploy and run this platform on **Streamlit Community Cloud** with one click:
+
+[![Deploy to Streamlit Cloud](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io/deploy?repository=ayushdas27/urban-mobility-intelligence-platform&branch=main&mainModule=streamlit_app.py)
+
+1. Click the badge above (or open the [Deploy Link](https://share.streamlit.io/deploy?repository=ayushdas27/urban-mobility-intelligence-platform&branch=main&mainModule=streamlit_app.py)).
+2. Sign in with your GitHub account (**ayushdas27**).
+3. The repository, branch (main), and app file (streamlit_app.py) are pre-configured.
+4. Click **Deploy!** to launch your live public URL.
+
+---
+
+## ⚡ Local Setup
 
 ### 1. Prerequisites
 `ash
 python --version  # Python 3.10+ recommended
-pip install -r backend/requirements.txt
-pip install streamlit folium streamlit-folium
+pip install -r requirements.txt
 `
 
 ### 2. Launch Streamlit Command Center
@@ -43,11 +60,19 @@ pip install streamlit folium streamlit-folium
 # Windows One-Click
 run_app.bat
 
-# Or Manual Command
+# Or Terminal Command
 streamlit run streamlit_app.py --server.port 8501
 `
 
 Access the portal at http://localhost:8501.
+
+---
+
+## 🐳 Docker Deployment
+`ash
+docker build -t urban-mobility-platform .
+docker run -p 8501:8501 urban-mobility-platform
+`
 
 ---
 
