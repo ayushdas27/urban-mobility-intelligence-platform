@@ -78,4 +78,4 @@ docker run -p 8501:8501 urban-mobility-platform
 
 ## 👥 Team Details
 - **Team**: Void Matrix
-- **Problem Statement**: SIH 2026 #26124 / #26166
+- **Problem Statement**: SIH 2026 #26124
