@@ -1,5 +1,4 @@
-# 🏛️ Urban Mobility & Civic Monitoring Platform
-**Smart India Hackathon 2026 · Problem Statement #26124**  
+# 🏛️ Urban Mobility & Civic Monitoring Platform  
 *AI-Powered Fleet Sensing & Automated Municipal Directive Engine*
 
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io/deploy?repository=ayushdas27/urban-mobility-intelligence-platform&branch=main&mainModule=streamlit_app.py)
